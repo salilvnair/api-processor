@@ -23,7 +23,9 @@ public class RestWebServiceFacade {
 
     public static final String RESPONSE = "RESPONSE";
 
-    public RestWebServiceFacade() {}
+    public RestWebServiceFacade() {
+        this.objectMapper = new ObjectMapper();
+    }
 
     public RestWebServiceFacade(Logger logger) {
         if(logger != null) {
