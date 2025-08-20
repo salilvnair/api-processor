@@ -15,11 +15,32 @@ import java.util.Map;
 
 public class RestWebServiceFacade {
 
-    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private ObjectMapper objectMapper;
 
     public static final String REQUEST = "REQUEST";
 
     public static final String RESPONSE = "RESPONSE";
+
+    public RestWebServiceFacade() {}
+
+    public RestWebServiceFacade(Logger logger) {
+        if(logger != null) {
+            this.logger = logger;
+        }
+    }
+
+    public RestWebServiceFacade(Logger logger, ObjectMapper objectMapper) {
+        if (logger != null) {
+            this.logger = logger;
+        }
+        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
+    }
+
+    public RestWebServiceFacade(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
+    }
 
     public void initiate(RestWebServiceHandler handler, Map<String, Object> restWsMap, Object... objects) {
         if(handler == null) {
@@ -62,10 +83,9 @@ public class RestWebServiceFacade {
 
     public void printLogs(Object requestResponse, RestWebServiceHandler handler, String type) {
         String webServiceName = handler.webServiceName();
-        ObjectMapper mapper = new ObjectMapper();
         String jsonString = "{}";
         try {
-            jsonString=mapper.writeValueAsString(requestResponse);
+            jsonString = objectMapper.writeValueAsString(requestResponse);
         }
         catch (Exception ex) {
             logger.error("RestWebServiceFacade>>printLogs>>caught exception:"+ex);
