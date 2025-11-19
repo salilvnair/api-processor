@@ -14,10 +14,10 @@ import org.springframework.ws.soap.client.SoapFaultClientException;
 import org.springframework.ws.soap.saaj.SaajSoapMessage;
 import org.springframework.ws.support.MarshallingUtils;
 
-import javax.xml.soap.MimeHeader;
-import javax.xml.soap.MimeHeaders;
-import javax.xml.soap.SOAPException;
-import javax.xml.soap.SOAPHeader;
+import jakarta.xml.soap.MimeHeader;
+import jakarta.xml.soap.MimeHeaders;
+import jakarta.xml.soap.SOAPException;
+import jakarta.xml.soap.SOAPHeader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
