@@ -5,11 +5,10 @@ import com.github.salilvnair.api.processor.soap.delegate.resolver.core.SoapWebSe
 import com.github.salilvnair.api.processor.soap.delegate.resolver.reflect.SoapHeader;
 import com.github.salilvnair.api.processor.soap.delegate.resolver.reflect.SoapHeaderAttribute;
 import org.springframework.stereotype.Component;
-
 import javax.xml.namespace.QName;
-import javax.xml.soap.SOAPElement;
-import javax.xml.soap.SOAPException;
-import javax.xml.soap.SOAPHeader;
+import jakarta.xml.soap.SOAPElement;
+import jakarta.xml.soap.SOAPException;
+import jakarta.xml.soap.SOAPHeader;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Set;
