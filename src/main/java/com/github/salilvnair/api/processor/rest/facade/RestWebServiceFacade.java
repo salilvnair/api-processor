@@ -1,13 +1,14 @@
 package com.github.salilvnair.api.processor.rest.facade;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.salilvnair.api.processor.helper.retry.RetryExecutor;
+import com.github.salilvnair.api.processor.helper.retry.RetryExecutorException;
+import com.github.salilvnair.api.processor.helper.retry.RetryObserver;
 import com.github.salilvnair.api.processor.rest.exception.RestWebServiceException;
 import com.github.salilvnair.api.processor.rest.handler.RestWebServiceDelegate;
 import com.github.salilvnair.api.processor.rest.handler.RestWebServiceHandler;
 import com.github.salilvnair.api.processor.rest.model.RestWebServiceRequest;
 import com.github.salilvnair.api.processor.rest.model.RestWebServiceResponse;
-import com.github.salilvnair.api.processor.helper.retry.RetryExecutor;
-import com.github.salilvnair.api.processor.helper.retry.RetryExecutorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,11 +64,27 @@ public class RestWebServiceFacade {
         if(delegate.retry()) {
             RestWebServiceRequest finalRequest = request;
             try {
-                 response =  new RetryExecutor()
-                                    .maxRetries(delegate.maxRetries())
-                                    .delay(delegate.delay(), delegate.delayTimeUnit())
-                                    .configure(delegate.whiteListedExceptions())
-                                    .execute(() -> delegate.invoke(finalRequest, restWsMap, objects));
+                response =  new RetryExecutor()
+                        .maxRetries(delegate.maxRetries())
+                        .delay(delegate.delay(), delegate.delayTimeUnit())
+                        .configure(delegate.whiteListedExceptions())
+                        .observer(new RetryObserver() {
+                            @Override
+                            public void onRetryScheduled(int nextAttempt, int maxRetries, long delayMs, Exception lastError) {
+                                delegate.onRetryScheduled(nextAttempt, maxRetries, delayMs, lastError);
+                            }
+
+                            @Override
+                            public void onRetryAttemptFailed(int attempt, int maxRetries, Exception error) {
+                                delegate.onRetryAttemptFailed(attempt, maxRetries, error);
+                            }
+
+                            @Override
+                            public void onMaxRetriesExceeded(int maxRetries, Exception lastError) {
+                                delegate.onMaxRetriesExceeded(maxRetries, lastError);
+                            }
+                        })
+                        .execute(() -> delegate.invoke(finalRequest, restWsMap, objects));
             }
             catch (RetryExecutorException e) {
                 throw new RestWebServiceException(e, handler.webServiceName());

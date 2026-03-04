@@ -14,12 +14,27 @@ import java.util.function.Supplier;
 public class RetryExecutor {
 	
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
+    private static volatile RetryObserver globalObserver;
 
     private int maxRetries = 0;
 
     private long delay = 0;
     
     private List<String> whiteListedExceptions;
+    private RetryObserver observer;
+
+    public static void setGlobalObserver(RetryObserver observer) {
+        globalObserver = observer;
+    }
+
+    public static RetryObserver getGlobalObserver() {
+        return globalObserver;
+    }
+
+    public RetryExecutor observer(RetryObserver observer) {
+        this.observer = observer;
+        return this;
+    }
 
     public RetryExecutor maxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
@@ -92,14 +107,15 @@ public class RetryExecutor {
         	}
         	logger.error(e.getLocalizedMessage());
             logger.error("FAILED will be retried {} times after a delay of {} seconds.", maxRetries, TimeUnit.MILLISECONDS.toSeconds(delay));
-            return retry(function);
+            return retry(function, e);
         }
     }
 
-    private <T> T retry(Supplier<T> function) throws RetryExecutorException {
-    	Exception exception = null;
-        int retryCounter = 0;
-        while (retryCounter < maxRetries) {
+    private <T> T retry(Supplier<T> function, Exception initialException) throws RetryExecutorException {
+    	Exception exception = initialException;
+        int attempt = 1;
+        while (attempt <= maxRetries) {
+            notifyRetryScheduled(attempt, exception);
             try {
             	if( delay > 0 ) {
             		Thread.sleep(delay);
@@ -107,14 +123,16 @@ public class RetryExecutor {
                 return function.get();
             } 
             catch (Exception ex) {
-                retryCounter++;
+                notifyRetryAttemptFailed(attempt, ex);
                 logger.error(ex.getLocalizedMessage());
-                logger.error("FAILED on retry {} of {}", retryCounter, maxRetries);
-                if (retryCounter >= maxRetries) {
+                logger.error("FAILED on retry {} of {}", attempt, maxRetries);
+                exception = ex;
+                if (attempt >= maxRetries) {
                 	logger.error("Max retries exceeded.");
-                	exception = ex;
+                    notifyMaxRetriesExceeded(exception);
                     break;
                 }
+                attempt++;
             }
         }
         if(exception==null) {
@@ -123,5 +141,42 @@ public class RetryExecutor {
         else {
         	throw new RetryExecutorException(exception, "FAILED on all of " + maxRetries + " retries", exception.getLocalizedMessage());
         }        
-   }  
-}
+   }
+
+    private RetryObserver activeObserver() {
+        return observer == null ? globalObserver : observer;
+    }
+
+    private void notifyRetryScheduled(int nextAttempt, Exception lastError) {
+        RetryObserver observer = activeObserver();
+        if (observer == null) {
+            return;
+        }
+        try {
+            observer.onRetryScheduled(nextAttempt, maxRetries, delay, lastError);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void notifyRetryAttemptFailed(int attempt, Exception error) {
+        RetryObserver observer = activeObserver();
+        if (observer == null) {
+            return;
+        }
+        try {
+            observer.onRetryAttemptFailed(attempt, maxRetries, error);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void notifyMaxRetriesExceeded(Exception lastError) {
+        RetryObserver observer = activeObserver();
+        if (observer == null) {
+            return;
+        }
+        try {
+            observer.onMaxRetriesExceeded(maxRetries, lastError);
+        } catch (Exception ignored) {
+        }
+    }
+} 

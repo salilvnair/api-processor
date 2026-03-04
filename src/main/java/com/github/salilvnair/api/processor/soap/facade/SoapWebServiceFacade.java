@@ -1,6 +1,7 @@
 package com.github.salilvnair.api.processor.soap.facade;
 
 import com.github.salilvnair.api.processor.helper.retry.RetryExecutor;
+import com.github.salilvnair.api.processor.helper.retry.RetryObserver;
 import com.github.salilvnair.api.processor.soap.delegate.SoapWebServiceDelegate;
 import com.github.salilvnair.api.processor.soap.exception.SoapWebServiceException;
 import com.github.salilvnair.api.processor.soap.handler.SoapWebServiceHandler;
@@ -22,14 +23,34 @@ public class SoapWebServiceFacade {
         }
         if (delegate.retry()) {
             try {
-                responseWrapper = (new RetryExecutor()).maxRetries(delegate.maxRetries()).delay(delegate.delay(), delegate.delayTimeUnit()).configure(delegate.whiteListedExceptions()).execute(() -> {
-                    try {
-                        return delegate.invoke(requestWrapper, methodParamMap, objects);
-                    }
-                    catch (SoapWebServiceException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                responseWrapper = (new RetryExecutor())
+                        .maxRetries(delegate.maxRetries())
+                        .delay(delegate.delay(), delegate.delayTimeUnit())
+                        .configure(delegate.whiteListedExceptions())
+                        .observer(new RetryObserver() {
+                            @Override
+                            public void onRetryScheduled(int nextAttempt, int maxRetries, long delayMs, Exception lastError) {
+                                delegate.onRetryScheduled(nextAttempt, maxRetries, delayMs, lastError);
+                            }
+
+                            @Override
+                            public void onRetryAttemptFailed(int attempt, int maxRetries, Exception error) {
+                                delegate.onRetryAttemptFailed(attempt, maxRetries, error);
+                            }
+
+                            @Override
+                            public void onMaxRetriesExceeded(int maxRetries, Exception lastError) {
+                                delegate.onMaxRetriesExceeded(maxRetries, lastError);
+                            }
+                        })
+                        .execute(() -> {
+                            try {
+                                return delegate.invoke(requestWrapper, methodParamMap, objects);
+                            }
+                            catch (SoapWebServiceException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
             }
             catch (Exception ex) {
                 throw new SoapWebServiceException(ex, delegate.webServiceName());

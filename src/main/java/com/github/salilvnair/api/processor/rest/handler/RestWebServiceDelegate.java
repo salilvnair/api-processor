@@ -20,4 +20,10 @@ public interface RestWebServiceDelegate {
     default int maxRetries() {return 0;}
 
     default TimeUnit delayTimeUnit() { return TimeUnit.MINUTES;}
+
+    default void onRetryScheduled(int nextAttempt, int maxRetries, long delayMs, Exception lastError) {}
+
+    default void onRetryAttemptFailed(int attempt, int maxRetries, Exception error) {}
+
+    default void onMaxRetriesExceeded(int maxRetries, Exception lastError) {}
 }
