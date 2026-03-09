@@ -1,6 +1,6 @@
 package com.github.salilvnair.api.processor.rest.facade;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.github.salilvnair.api.processor.helper.retry.RetryExecutor;
 import com.github.salilvnair.api.processor.helper.retry.RetryExecutorException;
 import com.github.salilvnair.api.processor.helper.retry.RetryObserver;
